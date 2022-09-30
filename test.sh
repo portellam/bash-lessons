@@ -65,7 +65,7 @@
                 str_line=${str_line##*.}                    # ditto
 
                 # check if string is a valid integer #
-                if [ "${str_line}" -eq "$(( ${str_line} ))" ] 2> /dev/null; then
+                if [[ "${str_line}" -eq "$(( ${str_line} ))" ]] 2> /dev/null; then
                     declare -ir int_firstIndex="${str_line}"
 
                 else
@@ -102,7 +102,7 @@
                 str_line=${str_line##*.}                        # ditto
 
                 # check if string is a valid integer #
-                if [ "${str_line}" -eq "$(( ${str_line} ))" ] 2> /dev/null; then
+                if [[ "${str_line}" -eq "$(( ${str_line} ))" ]] 2> /dev/null; then
                     declare -i int_lastIndex="${str_line}"
 
                 else
@@ -150,8 +150,8 @@
                 # be more specific with exit codes?
                 #   the idea is to have *absolute* exit codes (0 or 255) for pass and fail.
                 #   and to have *relative* exit codes (any num between 0 and 255) for specific errors and exceptions
-                #       then output the string to console here (save space writing the same error, per function, per condition statement)
-                #       nd finally override those at the end of a given function, with exit '255'
+                #       then, output the string to console here (save space writing the same error, per function, per condition statement)
+                #       finally, override those at the end of a given function, with exit '255'
 
             # 100)
             #     echo -e "Skipped.";;
@@ -220,23 +220,3 @@
     CreateBackupFromFile $str_thisFile
 
     echo "'$?'" # exit code from last function
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
