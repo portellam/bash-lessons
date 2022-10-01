@@ -171,6 +171,30 @@
             esac
     }
 
+# conditional execution #
+    function cond_exec
+    {
+        (exit 0)    # set exit status to "successful" before work starts
+
+        # test IP resolution
+        echo -en "Testing Internet connection...\t\t"
+        ping -q -w 1 8.8.8.8 >> /dev/null && echo -e "Successful." || echo -e "Failure." && (exit 255)          # set exit status, but still execute rest of function
+
+        echo -en "Testing Domain Name Resolution...\t"
+        ping -q -w 1 www.google.com >> /dev/null && echo -e "Successful." || echo -e "Failure." && (exit 255)   # ditto
+
+        case "$?" in
+            0)
+                echo -e "You are online!";;                             # function never failed
+
+            255)
+                echo -e "Check network settings and try again.";;       # function failed at a given point, inform user
+
+            *)
+                echo -e "You are in purgatory!";;                       # impossible state
+        esac
+    }
+
 # scratch #
     function main {
 
@@ -227,7 +251,8 @@
     # echo -e "save the\nworld" > $str_thisFile
     # echo -e "screw the\nworld" > $str_thisFile
 
-    CreateBackupFromFile $str_thisFile
+    # CreateBackupFromFile $str_thisFile
+
 
     # if CreateBackupFromFile $str_thisFile; then
     #     echo -e "Pass."
@@ -237,3 +262,5 @@
     # fi
 
     # echo "'$?'" # exit code from last function
+
+    cond_exec
