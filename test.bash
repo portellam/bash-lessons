@@ -26,6 +26,7 @@
         #
 
         echo -en "Backing up file... "
+        echo -e "$?"
 
         # parameters #
         str_thisFile=$1
@@ -77,9 +78,17 @@
                 # echo
                 # echo -e "'$int_firstIndex'"
 
+                for str_element in ${arr_thisDir[@]}; do
+                    if cmp -s $str_thisFile $str_element; then
+                        echo -e "'$str_thisFile' is same as backup(s). Operation skipped."
+                        (exit 100)
+                        break
+                    fi
+                done
+
                 # if latest backup is same as original file, exit
-                if [[ $str_thisFile -ef ${arr_thisDir[-1]} ]]; then
-                    # echo -e "'$str_thisFile' is same as backup(s). Operation skipped."
+                if cmp -s $str_thisFile ${arr_thisDir[-1]}; then
+                    echo -e "'$str_thisFile' is same as backup(s). Operation skipped."
                     (exit 100)
                 fi
 
@@ -92,7 +101,7 @@
                 done
 
                 # if *first* backup is same as original file, exit
-                if [[ $str_thisFile -ef ${arr_thisDir[0]} ]]; then
+                if cmp -s $str_thisFile ${arr_thisDir[0]}; then
                     # echo -e "'$str_thisFile' is same as backup(s). Operation skipped."
                     (exit 100)
                 fi
@@ -120,7 +129,7 @@
                     # echo -e "'$str_thisFile' is newer than backup(s). Operation complete."
                     (exit 0)
 
-                elif [[ $str_thisFile -ot ${arr_thisDir[-1]} ]]; then
+                elif [[ $str_thisFile -ot ${arr_thisDir[-1]} && ! ( $str_thisFile -ef ${arr_thisDir[-1]} ) ]]; then
                     # echo -e "'$str_thisFile' is older than backup(s). Operation skipped."
                     (exit 100)
 
@@ -136,41 +145,46 @@
                 (exit 0)
             fi
 
-        case "$?" in
-            0)
-                echo -e "Complete.";;
+        # append output and return code
+        # when declaring this function, note the return code and create a condition given if "failure" (failure or just skipping) is mission critical.
+            case "$?" in
+                0)
+                    echo -e "Complete."
+                    return 0;;
 
-            255)
-                echo -e "Failed. Thrown exception.";;
+                255)
+                    echo -e "Failed. Thrown exception."
+                    return 1;;
 
-            *)
-                echo -e "Skipped.";;
+                *)
+                    echo -e "Skipped."
+                    return 1;;
 
-            # NOTES:
-                # be more specific with exit codes?
-                #   the idea is to have *absolute* exit codes (0 or 255) for pass and fail.
-                #   and to have *relative* exit codes (any num between 0 and 255) for specific errors and exceptions
-                #       then, output the string to console here (save space writing the same error, per function, per condition statement)
-                #       finally, override those at the end of a given function, with exit '255'
+                # NOTES:
+                    # be more specific with exit codes?
+                    #   the idea is to have *absolute* exit codes (0 or 255) for pass and fail.
+                    #   and to have *relative* exit codes (any num between 0 and 255) for specific errors and exceptions
+                    #       then, output the string to console here (save space writing the same error, per function, per condition statement)
+                    #       finally, override those at the end of a given function, with exit '255'
 
-            # 100)
-            #     echo -e "Skipped.";;
+                # 100)
+                #     echo -e "Skipped.";;
 
-            # *)
-            #     echo -e "Unknown status. Exit code not described.";;
-        esac
+                # *)
+                #     echo -e "Unknown status. Exit code not described.";;
+            esac
     }
 
 # scratch #
     function main {
 
-        # echo filename
+        echo filename
         echo $0
 
-        # echo present working directory
+        echo present working directory
         echo
         pwd
-        basename $( pwd )   # echo *lowest* child directory
+        basename $( pwd )   echo *lowest* child directory
 
         # parse files in current dir #
         echo
@@ -214,9 +228,14 @@
 
     # echo -e "hello\nworld" > $str_thisFile
     # echo -e "shalom\nworld" > $str_thisFile
-    echo -e "save the\nworld" > $str_thisFile
-    #echo -e "screw the\nworld" > $str_thisFile
+    # echo -e "save the\nworld" > $str_thisFile
+    # echo -e "screw the\nworld" > $str_thisFile
 
-    CreateBackupFromFile $str_thisFile
+    if CreateBackupFromFile $str_thisFile; then
+        echo -e "Pass."
+
+    else
+        echo -e "Fail."
+    fi
 
     echo "'$?'" # exit code from last function
