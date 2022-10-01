@@ -220,6 +220,8 @@
         declare -a arr_DeviceType=()
         declare -a arr_DeviceVendor=()
 
+        (exit 1)
+
         # parse list of IOMMU groups #
         for str_line1 in $(find /sys/kernel/iommu_groups/* -maxdepth 0 -type d | sort -V); do
 
@@ -230,6 +232,7 @@
 
             # parse given IOMMU group for PCI IDs #
             for str_line2 in $( ls ${str_line1}/devices ); do
+                (exit 1)
 
                 # parameters #
                 # save output of given device #
@@ -238,23 +241,26 @@
                 str_thisDeviceType="$( lspci -ms ${str_line2} | cut -d '"' -f2 )"
                 str_thisDeviceVendor="$( lspci -ms ${str_line2} | cut -d '"' -f4 )"
                 str_thisDeviceDriver="$( lspci -ks ${str_line2} | grep driver | cut -d ':' -f2 )"
-                str_thisDeviceDriver="${str_thisDeviceDriver##" "}"
 
-                case $str_thisDeviceDriver in
-                    *"vfio-pci"*)
-                        str_thisDeviceDriver="N/A"
+                if [[ $str_thisDeviceDriver == "" ]]; then
+                    str_thisDeviceDriver="N/A"
+                    (exit 100)
+                #fi
+
+                else
+
+                #if [[ -n $str_thisDeviceDriver ]]; then
+                    if [[ $str_thisDeviceDriver == *"vfio-pci"* ]]; then
+                        str_thisDeviceDriver="VFIO"
                         (exit 255)
-                        break
-                        ;;
 
-                    "")
-                        str_thisDeviceDriver="N/A";;
+                    else
+                        str_thisDeviceDriver="${str_thisDeviceDriver##" "}"
+                    fi
+                fi
+                echo $str_thisDeviceDriver
+                echo $?
 
-                    # *)
-                    #     str_thisDeviceDriver="$( lspci -ks ${str_line2} | grep driver | cut -d ':' -f2 )"
-                    #     str_thisDeviceDriver="${str_thisDeviceDriver##" "}"
-                    #     ;;
-                esac
 
                 # parameters #
                 arr_DeviceIOMMU+=( "$str_thisIOMMU" )
@@ -303,6 +309,12 @@
             # function failed at a given point, inform user
             255)
                 echo -e "Failed. Existing VFIO setup detected."
+                # return false
+                ;;
+
+            # missed targets
+            *)
+                echo -e "Complete. One or more device driver is null."
                 # return false
                 ;;
         esac
@@ -410,3 +422,5 @@
     echo ${!arr1[@]}
 
     ParseIOMMUandPCI
+
+    echo $?
