@@ -264,16 +264,12 @@
         done
 
         case true in
-            $bool_foundVFIO)
-                (exit 255)
-                ;;
-
             $bool_missingDriver)
                 (exit 100)
                 ;;
 
-            *)
-                (exit 0)
+            $bool_foundVFIO)
+                (exit 255)
                 ;;
         esac
 
