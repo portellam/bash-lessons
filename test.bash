@@ -212,23 +212,20 @@
 
         # parameters #
         declare -ir int_lastIOMMU="$( basename $( ls -1v /sys/kernel/iommu_groups/ | sort -hr | head -n1 ) )"
-        # declare -a arr_IOMMU=()
         declare -a arr_DeviceIOMMU=()
         declare -a arr_DevicePCI_ID=()
         declare -a arr_DeviceDriver=()
         declare -a arr_DeviceName=()
         declare -a arr_DeviceType=()
         declare -a arr_DeviceVendor=()
-
-        (exit 1)
+        bool_missingDriver=false
+        bool_foundVFIO=false
 
         # parse list of IOMMU groups #
         for str_line1 in $(find /sys/kernel/iommu_groups/* -maxdepth 0 -type d | sort -V); do
 
             # parameters #
             str_thisIOMMU=$( basename $str_line1 )
-            # arr_IOMMU+=( $str_thisIOMMU )
-            # echo -e "IOMMU Group:\t\t$( basename $str_thisIOMMU )"        # print output
 
             # parse given IOMMU group for PCI IDs #
             for str_line2 in $( ls ${str_line1}/devices ); do
@@ -242,25 +239,19 @@
                 str_thisDeviceVendor="$( lspci -ms ${str_line2} | cut -d '"' -f4 )"
                 str_thisDeviceDriver="$( lspci -ks ${str_line2} | grep driver | cut -d ':' -f2 )"
 
-                if [[ $str_thisDeviceDriver == "" ]]; then
+                if [[ -z $str_thisDeviceDriver ]]; then
                     str_thisDeviceDriver="N/A"
-                    (exit 100)
-                #fi
+                    bool_missingDriver=true
 
                 else
-
-                #if [[ -n $str_thisDeviceDriver ]]; then
                     if [[ $str_thisDeviceDriver == *"vfio-pci"* ]]; then
-                        str_thisDeviceDriver="VFIO"
-                        (exit 255)
+                        str_thisDeviceDriver="N/A"
+                        bool_foundVFIO=true
 
                     else
                         str_thisDeviceDriver="${str_thisDeviceDriver##" "}"
                     fi
                 fi
-                echo $str_thisDeviceDriver
-                echo $?
-
 
                 # parameters #
                 arr_DeviceIOMMU+=( "$str_thisIOMMU" )
@@ -269,40 +260,27 @@
                 arr_DeviceName+=( "$str_thisDeviceName" )
                 arr_DeviceType+=( "$str_thisDeviceType" )
                 arr_DeviceVendor+=( "$str_thisDeviceVendor" )
-
-                # print output of given device #
-                # echo -e "\tDevice ID:\t${str_line2}"
-                # echo -e "\tDevice Type:\t${str_thisDeviceType}"
-                # echo -e "\tDevice Vendor:\t${str_thisDeviceVendor}"
-                # echo -e "\tDevice Name:\t${str_thisDeviceName}"
-                # echo -e "\tDevice Driver:\t${str_thisDeviceDriver}"
-
-                # match for VGA device or NVIDIA VGA device #
-                # case $( echo $str_thisDeviceType | tr '[:lower:]' '[:upper:]' ) in
-
-                #     *"VGA"*|*"GRAPHICS"*)
-
-                #         case $( echo $str_thisDeviceVendor | tr '[:lower:]' '[:upper:]' ) in
-
-                #             *"NVIDIA"*)
-                #                 echo -e "^^^^^ Found an NVIDIA VGA device! ^^^^^";;
-
-                #             *)
-                #                 echo -e "^^^^^ Found a VGA device! ^^^^^";;
-                #         esac
-
-                #         ;;
-                # esac
-
-                # echo        # pad output
             done
         done
 
-        case "$?" in
+        case true in
+            $bool_foundVFIO)
+                (exit 255)
+                ;;
 
+            $bool_missingDriver)
+                (exit 100)
+                ;;
+
+            *)
+                (exit 0)
+                ;;
+        esac
+
+        case "$?" in
             # function never failed
             0)
-                echo -e "Successful."
+                echo -e "Complete."
                 # return true
                 ;;
 
@@ -314,39 +292,10 @@
 
             # missed targets
             *)
-                echo -e "Complete. One or more device driver is null."
+                echo -e "Complete. One or more device driver is missing."
                 # return false
                 ;;
         esac
-
-        # echo
-        # for i in ${arr_DeviceIOMMU[@]}; do
-        #     echo -e "IOMMU: $i"
-        # done
-
-        # echo
-        # for i in ${arr_DevicePCI_ID[@]}; do
-        #     echo -e "PCI_ID: $i"
-        # done
-
-        # echo
-        # declare -i int_IOMMU=0
-
-        # while [[ $int_IOMMU -le $int_lastIOMMU ]]; do
-        #     declare -i int_i=0
-        #     echo -e "IOMMU: $int_IOMMU"
-
-        #     while [[ $int_i -lt ${#arr_DeviceIOMMU[@]} ]]; do
-        #         if [[ "${arr_DeviceIOMMU[$int_i]}" == "$int_IOMMU" ]]; then
-        #             echo -e "\tPCI_ID: ${arr_DevicePCI_ID[$int_i]}"
-        #         fi
-
-        #         (( int_i++ ))
-        #     done
-
-        #     (( int_IOMMU++ ))
-        #     echo
-        # done
     }
 
 # scratch #
