@@ -20,9 +20,8 @@
     {
 
         # behavior:
-        # create a backup file
-        # exception handling
-        # garbage collection: delete all but last n backup files
+        #   create a backup file
+        #   return boolean, to be used by main
         #
 
         echo -en "Backing up file... "
@@ -148,13 +147,16 @@
         # when declaring this function, note the return code and create a condition given if "failure" (failure or just skipping) is mission critical.
             case "$?" in
                 0)
-                    echo -e "Complete.";;
+                    echo -e "Complete."
+                    return true;;
 
                 255)
-                    echo -e "Failed. Thrown exception.";;
+                    echo -e "Failed. Thrown exception."
+                    return false;;
 
                 *)
-                    echo -e "Skipped.";;
+                    echo -e "Skipped."
+                    return false;;
 
                 # NOTES:
                     # be more specific with exit codes?
@@ -172,26 +174,33 @@
     }
 
 # conditional execution #
-    function cond_exec
+    function TestNetwork
     {
+        # behavior:
+        #   test internet connection and DNS servers
+        #   return boolean, to be used by main
+        #
+
         (exit 0)    # set exit status to "successful" before work starts
 
         # test IP resolution
         echo -en "Testing Internet connection...\t\t"
         ping -q -w 1 8.8.8.8 >> /dev/null && echo -e "Successful." || echo -e "Failure." && (exit 255)          # set exit status, but still execute rest of function
 
-        echo -en "Testing Domain Name Resolution...\t"
+        echo -en "Testing connection to DNS...\t"
         ping -q -w 1 www.google.com >> /dev/null && echo -e "Successful." || echo -e "Failure." && (exit 255)   # ditto
 
         case "$?" in
+
+            # function never failed
             0)
-                echo -e "You are online!";;                             # function never failed
+                echo -e "You are online!"
+                return true;;
 
+            # function failed at a given point, inform user
             255)
-                echo -e "Check network settings and try again.";;       # function failed at a given point, inform user
-
-            *)
-                echo -e "You are in purgatory!";;                       # impossible state
+                echo -e "Check network settings and try again."
+                return false;;
         esac
     }
 
@@ -263,4 +272,9 @@
 
     # echo "'$?'" # exit code from last function
 
-    cond_exec
+    if [[ cond_exec == true ]]; then
+        echo "true"
+
+    else
+        echo "false"
+    fi
