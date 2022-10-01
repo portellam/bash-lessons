@@ -7,9 +7,11 @@
 # check if sudo/root #
     function CheckIfUserIsRoot
     {
-        if [[ $(whoami) != "root" ]]; then
-            str_thisFile=$(echo ${0##/*})
-            str_thisFile=$(echo $str_thisFile | cut -d '/' -f2)
+        (exit 0)
+
+        if [[ $( whoami ) != "root" ]]; then
+            str_thisFile=$( echo ${0##/*} )
+            str_thisFile=$( echo $str_thisFile | cut -d '/' -f2 )
             echo -e "WARNING: Script must execute as root. In terminal, run:\n\t'bash $str_thisFile'\n\tor\n\t'su' and 'bash $str_thisFile'. Exiting."
             exit 1
         fi
@@ -222,7 +224,7 @@
         bool_foundVFIO=false
 
         # parse list of IOMMU groups #
-        for str_line1 in $(find /sys/kernel/iommu_groups/* -maxdepth 0 -type d | sort -V); do
+        for str_line1 in $( find /sys/kernel/iommu_groups/* -maxdepth 0 -type d | sort -V ); do
 
             # parameters #
             str_thisIOMMU=$( basename $str_line1 )
