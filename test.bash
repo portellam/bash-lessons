@@ -24,6 +24,7 @@
         #   return boolean, to be used by main
         #
 
+        (exit 0)
         echo -en "Backing up file... "
 
         # parameters #
@@ -125,7 +126,7 @@
             if [[ $str_thisFile -nt ${arr_thisDir[-1]} && ! ( $str_thisFile -ef ${arr_thisDir[-1]} ) ]]; then
                 cp $str_thisFile "${str_thisFile}.${int_lastIndex}${str_suffix}"
                 # echo -e "'$str_thisFile' is newer than backup(s). Operation complete."
-                (exit 0)
+                # (exit 0)
 
             elif [[ $str_thisFile -ot ${arr_thisDir[-1]} && ! ( $str_thisFile -ef ${arr_thisDir[-1]} ) ]]; then
                 # echo -e "'$str_thisFile' is older than backup(s). Operation skipped."
@@ -140,7 +141,7 @@
         else
             cp $str_thisFile "${str_thisFile}.0${str_suffix}"
             # echo -e "Operation complete."
-            (exit 0)
+            # (exit 0)
         fi
 
         # append output and return code
@@ -185,16 +186,15 @@
 
         # test IP resolution
         echo -en "Testing Internet connection...\t\t"
-        ping -q -w 1 8.8.8.8 >> /dev/null && echo -e "Successful." || echo -e "Failure." && (exit 255)          # set exit status, but still execute rest of function
+        ping -q -c 1 8.8.8.8 >> /dev/null && echo -e "Successful." || echo -e "Failure." && (exit 255)          # set exit status, but still execute rest of function
 
         echo -en "Testing connection to DNS...\t"
-        ping -q -w 1 www.google.com >> /dev/null && echo -e "Successful." || echo -e "Failure." && (exit 255)   # ditto
+        ping -q -c 1 www.google.com >> /dev/null && echo -e "Successful." || echo -e "Failure." && (exit 255)   # ditto
 
         case "$?" in
 
             # function never failed
             0)
-                echo -e "You are online!"
                 return true;;
 
             # function failed at a given point, inform user
@@ -202,6 +202,139 @@
                 echo -e "Check network settings and try again."
                 return false;;
         esac
+    }
+
+# vfio #
+    function ParseIOMMUandPCI
+    {
+        (exit 0)
+        echo -en "Parsing IOMMU groups... "
+
+        # parameters #
+        declare -ir int_lastIOMMU="$( basename $( ls -1v /sys/kernel/iommu_groups/ | sort -hr | head -n1 ) )"
+        # declare -a arr_IOMMU=()
+        declare -a arr_DeviceIOMMU=()
+        declare -a arr_DevicePCI_ID=()
+        declare -a arr_DeviceDriver=()
+        declare -a arr_DeviceName=()
+        declare -a arr_DeviceType=()
+        declare -a arr_DeviceVendor=()
+
+        # parse list of IOMMU groups #
+        for str_line1 in $(find /sys/kernel/iommu_groups/* -maxdepth 0 -type d | sort -V); do
+
+            # parameters #
+            str_thisIOMMU=$( basename $str_line1 )
+            # arr_IOMMU+=( $str_thisIOMMU )
+            # echo -e "IOMMU Group:\t\t$( basename $str_thisIOMMU )"        # print output
+
+            # parse given IOMMU group for PCI IDs #
+            for str_line2 in $( ls ${str_line1}/devices ); do
+
+                # parameters #
+                # save output of given device #
+                str_thisDevicePCI_ID="${str_line2##"0000:"}"
+                str_thisDeviceName="$( lspci -ms ${str_line2} | cut -d '"' -f6 )"
+                str_thisDeviceType="$( lspci -ms ${str_line2} | cut -d '"' -f2 )"
+                str_thisDeviceVendor="$( lspci -ms ${str_line2} | cut -d '"' -f4 )"
+                str_thisDeviceDriver="$( lspci -ks ${str_line2} | grep driver | cut -d ':' -f2 )"
+                str_thisDeviceDriver="${str_thisDeviceDriver##" "}"
+
+                case $str_thisDeviceDriver in
+                    *"vfio-pci"*)
+                        str_thisDeviceDriver="N/A"
+                        (exit 255)
+                        break
+                        ;;
+
+                    "")
+                        str_thisDeviceDriver="N/A";;
+
+                    # *)
+                    #     str_thisDeviceDriver="$( lspci -ks ${str_line2} | grep driver | cut -d ':' -f2 )"
+                    #     str_thisDeviceDriver="${str_thisDeviceDriver##" "}"
+                    #     ;;
+                esac
+
+                # parameters #
+                arr_DeviceIOMMU+=( "$str_thisIOMMU" )
+                arr_DevicePCI_ID+=( "$str_thisDevicePCI_ID" )
+                arr_DeviceDriver+=( "$str_thisDeviceDriver" )
+                arr_DeviceName+=( "$str_thisDeviceName" )
+                arr_DeviceType+=( "$str_thisDeviceType" )
+                arr_DeviceVendor+=( "$str_thisDeviceVendor" )
+
+                # print output of given device #
+                # echo -e "\tDevice ID:\t${str_line2}"
+                # echo -e "\tDevice Type:\t${str_thisDeviceType}"
+                # echo -e "\tDevice Vendor:\t${str_thisDeviceVendor}"
+                # echo -e "\tDevice Name:\t${str_thisDeviceName}"
+                # echo -e "\tDevice Driver:\t${str_thisDeviceDriver}"
+
+                # match for VGA device or NVIDIA VGA device #
+                # case $( echo $str_thisDeviceType | tr '[:lower:]' '[:upper:]' ) in
+
+                #     *"VGA"*|*"GRAPHICS"*)
+
+                #         case $( echo $str_thisDeviceVendor | tr '[:lower:]' '[:upper:]' ) in
+
+                #             *"NVIDIA"*)
+                #                 echo -e "^^^^^ Found an NVIDIA VGA device! ^^^^^";;
+
+                #             *)
+                #                 echo -e "^^^^^ Found a VGA device! ^^^^^";;
+                #         esac
+
+                #         ;;
+                # esac
+
+                # echo        # pad output
+            done
+        done
+
+        case "$?" in
+
+            # function never failed
+            0)
+                echo -e "Successful."
+                # return true
+                ;;
+
+            # function failed at a given point, inform user
+            255)
+                echo -e "Failed. Existing VFIO setup detected."
+                # return false
+                ;;
+        esac
+
+        # echo
+        # for i in ${arr_DeviceIOMMU[@]}; do
+        #     echo -e "IOMMU: $i"
+        # done
+
+        # echo
+        # for i in ${arr_DevicePCI_ID[@]}; do
+        #     echo -e "PCI_ID: $i"
+        # done
+
+        # echo
+        # declare -i int_IOMMU=0
+
+        # while [[ $int_IOMMU -le $int_lastIOMMU ]]; do
+        #     declare -i int_i=0
+        #     echo -e "IOMMU: $int_IOMMU"
+
+        #     while [[ $int_i -lt ${#arr_DeviceIOMMU[@]} ]]; do
+        #         if [[ "${arr_DeviceIOMMU[$int_i]}" == "$int_IOMMU" ]]; then
+        #             echo -e "\tPCI_ID: ${arr_DevicePCI_ID[$int_i]}"
+        #         fi
+
+        #         (( int_i++ ))
+        #     done
+
+        #     (( int_IOMMU++ ))
+        #     echo
+        # done
     }
 
 # scratch #
@@ -272,9 +405,8 @@
 
     # echo "'$?'" # exit code from last function
 
-    if [[ cond_exec == true ]]; then
-        echo "true"
+    declare -a arr1=({1..5})
 
-    else
-        echo "false"
-    fi
+    echo ${!arr1[@]}
+
+    ParseIOMMUandPCI
