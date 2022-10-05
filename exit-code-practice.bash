@@ -23,6 +23,197 @@
         fi
     }
 
+# create file #
+    function CreateFile
+    {
+        (exit 0)
+        echo -en "Creating file... "
+
+        # null exception
+        if [[ -z $1 ]]; then
+            (exit 254)
+        fi
+
+        # file not found
+        if [[ ! -e $1 ]]; then
+            touch $1 &> /dev/null || (exit 255)
+
+        else
+            (exit 3)
+        fi
+
+        case "$?" in
+            0)
+                echo -e "Successful."
+                true;;
+
+            3)
+                echo -e "Skipped. File '$1' exists."
+                true;;
+
+            255)
+                echo -e "Failed. Could not create file '$1'.";;
+
+            254)
+                echo -e "Failed. Null exception/invalid input.";;
+
+            {3-255})
+                false;;
+        esac
+    }
+
+# create file #
+    function DeleteFile
+    {
+        (exit 0)
+        echo -en "Deleting file... "
+
+        # null exception
+        if [[ -z $1 ]]; then
+            (exit 254)
+        fi
+
+        # file not found
+        if [[ ! -e $1 ]]; then
+            (exit 3)
+
+        else
+            touch $1 &> /dev/null || (exit 255)
+        fi
+
+        case "$?" in
+            0)
+                echo -e "Successful."
+                true;;
+
+            3)
+                echo -e "Skipped. File '$1' does not exist."
+                true;;
+
+            255)
+                echo -e "Failed. Could not delete file '$1'.";;
+
+            254)
+                echo -e "Failed. Null exception/invalid input.";;
+
+            {3-255})
+                false;;
+        esac
+    }
+
+# write to file #
+    function WriteVarToFile
+    {
+        (exit 0)
+        echo -e "Writing to file... "
+
+        # null exception
+        if [[ -z $1 || -z $2 ]]; then
+            (exit 254)
+        fi
+
+        # file not found exception
+        if [[ ! -e $1 ]]; then
+            (exit 253)
+        fi
+
+        # file not readable exception
+        if [[ ! -r $1 ]]; then
+            (exit 252)
+        fi
+
+        # if a given element is a string longer than one char, the var is an array #
+        for str_element in ${2}; do
+            if [[ ${#str_element} -gt 1 ]]; then
+                bool_varIsAnArray=true
+                break
+            fi
+        done
+
+        if [[ "$?" -eq 0 ]]; then
+
+            # write array to file #
+            if [[ $bool_varIsAnArray == true ]]; then
+                for str_element in ${2}; do
+                    echo $str_element >> $1 || (exit 255)
+                done
+
+            # write string to file #
+            else
+                echo $2 >> $1 || (exit 255)
+            fi
+        fi
+
+        case "$?" in
+            0)
+                echo -e "Successful."
+                true;;
+
+            255)
+                echo -e "Failed.";;
+
+            254)
+                echo -e "Failed. Null exception/invalid input.";;
+
+            253)
+                echo -e "Failed. File '$1' does not exist.";;
+
+            252)
+                echo -e "Failed. File '$1' is not readable.";;
+
+            {131-255})
+                false;;
+        esac
+    }
+
+    # function to comment out given lines, to be overwritten?
+    # function WriteVarToFile
+    # {
+    #     # # NOTE: necessary for newline preservation in arrays and files #
+    #     # SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
+    #     # IFS=$'\n'      # Change IFS to newline char
+
+    #     # (exit 0)
+    #     # echo -e "Writing to file... "
+
+    #     # # parameters #
+    #     # bool_varIsAnArray=false
+    #     # str_thisFile=$1
+
+    #     # if [[ -z $2 ]]; then
+    #     #     (exit 254)
+    #     # fi
+
+    #     # echo $2
+
+    #     # # if a given element is a string longer than one char, the var is an array #
+    #     # for str_element in ${2}; do
+    #     #     if [[ ${#str_element} -gt 1 ]]; then
+    #     #         bool_varIsAnArray=true
+    #     #         break
+    #     #     fi
+    #     # done
+
+    #     # if [[ $bool_varIsAnArray == true ]]; then
+    #     #     declare -ar arr_input1=($2)
+
+    #     # else
+    #     #     str_input1=$2
+    #     # fi
+
+    #     # # loop through file, check for injection points ? (of which to overwrite by the index value)
+
+    #     # for str_line in $str_thisFile; do
+    #     #     for (( int_i=0; int_i < ${#arr_input1[@]}; int_i++ )); do
+    #     #         case $str_line in
+    #     #             *"$int_i"
+    #     #         esac
+    #     #     done
+    #     # done
+
+
+    # }
+
 # create backup #
     function CreateBackupFromFile
     {
@@ -191,10 +382,10 @@
 
         # test IP resolution
         echo -en "Testing Internet connection...\t"
-        ping -q -c 1 8.8.8.8 >> /dev/null && echo -e "Successful." || ( echo -e "Failed." && (exit 255) )          # set exit status, but still execute rest of function
+        ping -q -c 1 8.8.8.8 &> /dev/null && echo -e "Successful." || ( echo -e "Failed." && (exit 255) )          # set exit status, but still execute rest of function
 
         echo -en "Testing connection to DNS...\t"
-        ping -q -c 1 www.google.com >> /dev/null && echo -e "Successful." || ( echo -e "Failed." && (exit 255) )   # ditto
+        ping -q -c 1 www.google.com &> /dev/null && echo -e "Successful." || ( echo -e "Failed." && (exit 255) )   # ditto
 
         case "$?" in
             0)
@@ -386,5 +577,11 @@
     ParseIOMMUandPCI
     echo '$? == '"'$?'"
     echo
+
+    DeleteFile "example.txt"
+    CreateFile "example.txt"
+    WriteVarToFile "example.txt" "hello world"
+
+    # DeleteFile "example.txt"
 
     echo -e "Exiting."
