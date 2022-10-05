@@ -12,14 +12,26 @@
         if [[ $( whoami ) != "root" ]]; then
             str_thisFile=$( echo ${0##/*} )
             str_thisFile=$( echo $str_thisFile | cut -d '/' -f2 )
-            echo -e "WARNING: Script must execute as root. In terminal, run:\n\t'bash $str_thisFile'\n\tor\n\t'su' and 'bash $str_thisFile'. Exiting."
-            exit 1
+            echo -e "WARNING: Script must execute as root. In terminal, run:\n\t'sudo bash $str_thisFile'"
+
+            (exit 255)
         fi
     }
 
 # create backup #
     function CreateBackupFromFile
     {
+        # unreserved exit codes
+        # 3-125, 129, 131-255
+
+        #
+        # 3         :   safe exit, skip
+        # 131-255   :   general failure
+        # 254       :   specific exception
+        # 253       :   ditto
+        # etc.
+        #
+
 
         # behavior:
         #   create a backup file
@@ -151,15 +163,15 @@
             case "$?" in
                 0)
                     echo -e "Complete."
-                    return true;;
+                    true;;
 
-                255)
+                *)
                     echo -e "Failed. Thrown exception."
-                    return false;;
+                    false;;
 
                 *)
                     echo -e "Skipped."
-                    return false;;
+                    false;;
 
                 # NOTES:
                     # be more specific with exit codes?
@@ -187,22 +199,20 @@
         (exit 0)    # set exit status to "successful" before work starts
 
         # test IP resolution
-        echo -en "Testing Internet connection...\t\t"
-        ping -q -c 1 8.8.8.8 >> /dev/null && echo -e "Successful." || echo -e "Failure." && (exit 255)          # set exit status, but still execute rest of function
+        echo -en "Testing Internet connection...\t"
+        ping -q -c 1 8.8.8.8 >> /dev/null && echo -e "Successful." || ( echo -e "Failure." && (exit 255) )          # set exit status, but still execute rest of function
 
         echo -en "Testing connection to DNS...\t"
-        ping -q -c 1 www.google.com >> /dev/null && echo -e "Successful." || echo -e "Failure." && (exit 255)   # ditto
+        ping -q -c 1 www.google.com >> /dev/null && echo -e "Successful." || ( echo -e "Failure." && (exit 255) )   # ditto
 
         case "$?" in
-
-            # function never failed
             0)
-                return true;;
+                ;;
 
-            # function failed at a given point, inform user
-            255)
+            *)
                 echo -e "Check network settings and try again."
-                return false;;
+                return 255
+                ;;
         esac
     }
 
@@ -279,19 +289,19 @@
             # function never failed
             0)
                 echo -e "Complete."
-                # return true
+                # true
                 ;;
 
             # function failed at a given point, inform user
             255)
                 echo -e "Failed. Existing VFIO setup detected."
-                # return false
+                # false
                 ;;
 
             # missed targets
             *)
                 echo -e "Complete. One or more device driver is missing."
-                # return false
+                # false
                 ;;
         esac
     }
@@ -336,38 +346,48 @@
     }
 
 # main #
-    CheckIfUserIsRoot
 
-    # file test
-    str_thisFile="test.txt"
+    # echo '$? == '"'$?'"
 
-    # check if file does NOT exist
-    if [[ ! -e $str_thisFile ]]; then        #
-    # if [[ -z $str_thisFile ]]; then            # these two statements are NOT equal
-        touch $str_thisFile
-    fi
+    # if CheckIfUserIsRoot; then echo -e "True"
+    # else echo -e "False"; fi
 
-    # echo -e "hello\nworld" > $str_thisFile
-    # echo -e "shalom\nworld" > $str_thisFile
-    # echo -e "save the\nworld" > $str_thisFile
-    # echo -e "screw the\nworld" > $str_thisFile
+    CheckIfUserIsRoot $?
 
-    # CreateBackupFromFile $str_thisFile
+    # TestNetwork
 
+    echo '$? == '"'$?'"
 
-    # if CreateBackupFromFile $str_thisFile; then
-    #     echo -e "Pass."
+    # # file test
+    # str_thisFile="test.txt"
 
-    # else
-    #     echo -e "Fail."
+    # # check if file does NOT exist
+    # if [[ ! -e $str_thisFile ]]; then        #
+    # # if [[ -z $str_thisFile ]]; then            # these two statements are NOT equal
+    #     touch $str_thisFile
     # fi
 
-    # echo "'$?'" # exit code from last function
+    # # echo -e "hello\nworld" > $str_thisFile
+    # # echo -e "shalom\nworld" > $str_thisFile
+    # # echo -e "save the\nworld" > $str_thisFile
+    # # echo -e "screw the\nworld" > $str_thisFile
 
-    declare -a arr1=({1..5})
+    # # CreateBackupFromFile $str_thisFile
 
-    echo ${!arr1[@]}
 
-    ParseIOMMUandPCI
+    # # if CreateBackupFromFile $str_thisFile; then
+    # #     echo -e "Pass."
 
-    echo $?
+    # # else
+    # #     echo -e "Fail."
+    # # fi
+
+    # # echo "'$?'" # exit code from last function
+
+    # declare -a arr1=({1..5})
+
+    # echo ${!arr1[@]}
+
+    # ParseIOMMUandPCI
+
+    # echo $?
