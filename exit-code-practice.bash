@@ -4,6 +4,10 @@
 # Author(s):    Alex Portell <github.com/portellam>
 #
 
+#
+# working example functions with appropriate exit codes
+#
+
 # check if sudo/root #
     function CheckIfUserIsRoot
     {
@@ -14,7 +18,8 @@
             str_thisFile=$( echo $str_thisFile | cut -d '/' -f2 )
             echo -e "WARNING: Script must execute as root. In terminal, run:\n\t'sudo bash $str_thisFile'"
 
-            (exit 255)
+            # (exit 1)      # same as below
+            false           # same as above
         fi
     }
 
@@ -147,7 +152,7 @@
                 true;;
 
             3)
-                echo -e "Skipped."
+                echo -e "Skipped. No changes from most recent backup."
                 true;;
 
             255)
@@ -196,7 +201,7 @@
                 true;;
 
             *)
-                echo -e "Check network settings and try again."
+                echo -e "Failed to ping Internet/DNS servers. Check network settings and try again."
                 false;;
         esac
     }
@@ -260,15 +265,13 @@
             done
         done
 
-        # select only one exit statement
+        # prioritize worst exit code (place last)
         case true in
-            $bool_foundVFIO)
-                (exit 254)
-                break;;
-
             $bool_missingDriver)
-                (exit 3)
-                break;;
+                (exit 3);;
+
+            $bool_foundVFIO)
+                (exit 254);;
         esac
 
         case "$?" in
@@ -278,7 +281,7 @@
                     true;;
 
                 3)
-                    echo -e "Skipped. No devices found."
+                    echo -e "Successful. One or more external PCI device(s) missing drivers."
                     true;;
 
                 255)
@@ -341,9 +344,11 @@
 
     CheckIfUserIsRoot
     echo '$? == '"'$?'"
+    echo
 
     TestNetwork
     echo '$? == '"'$?'"
+    echo
 
     # file test
     str_thisFile="test.txt"
@@ -365,6 +370,7 @@
 
     CreateBackupFromFile $str_thisFile
     echo '$? == '"'$?'"
+    echo
 
     # if CreateBackupFromFile $str_thisFile; then
     #     echo -e "Pass."
@@ -379,3 +385,6 @@
 
     ParseIOMMUandPCI
     echo '$? == '"'$?'"
+    echo
+
+    echo -e "Exiting."
