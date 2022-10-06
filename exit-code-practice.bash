@@ -27,7 +27,7 @@
     function CreateFile
     {
         (exit 0)
-        echo -en "Creating file... "
+        echo -en "Creating file...\t"
 
         # null exception
         if [[ -z $1 ]]; then
@@ -66,7 +66,7 @@
     function DeleteFile
     {
         (exit 0)
-        echo -en "Deleting file... "
+        echo -en "Deleting file...\t"
 
         # null exception
         if [[ -z $1 ]]; then
@@ -105,7 +105,7 @@
     function WriteVarToFile
     {
         (exit 0)
-        echo -e "Writing to file... "
+        echo -en "Writing to file...\t"
 
         # null exception
         if [[ -z $1 || -z $2 ]]; then
@@ -235,7 +235,7 @@
         #
 
         (exit 0)
-        echo -en "Backing up file... "
+        echo -en "Backing up file...\t"
 
         # parameters #
         str_thisFile=$1
@@ -392,7 +392,7 @@
                 true;;
 
             *)
-                echo -e "Failed to ping Internet/DNS servers. Check network settings and try again."
+                echo -e "Failed to ping Internet/DNS servers. Check network settings or firewall, and try again."
                 false;;
         esac
     }
@@ -401,7 +401,7 @@
     function ParseIOMMUandPCI
     {
         (exit 254)
-        echo -en "Parsing IOMMU groups... "
+        echo -en "Parsing IOMMU groups...\t"
 
         # parameters #
         declare -ir int_lastIOMMU="$( basename $( ls -1v /sys/kernel/iommu_groups/ | sort -hr | head -n1 ) )"
